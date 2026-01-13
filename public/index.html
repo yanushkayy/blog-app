@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Простой блог</title>
+    <style>
+      :root {
+        --bg: #f4fff4;
+        --card: #ffffff;
+        --border: #c6e8c6;
+        --text: #1f3d1f;
+        --muted: #3f5f3f;
+        --accent: #7bd97b;
+        --accent-strong: #67c267;
+        --accent-soft: #d8f5d8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: var(--bg);
+        color: var(--text);
+      }
+      h1,
+      h2 {
+        margin-bottom: 8px;
+      }
+      section {
+        background: var(--card);
+        border: 1px solid var(--border);
+        padding: 12px;
+        margin-bottom: 14px;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      }
+      label {
+        display: block;
+        margin-top: 8px;
+        color: var(--text);
+      }
+      input,
+      textarea,
+      select {
+        width: 100%;
+        padding: 10px;
+        margin-top: 4px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: #fafffa;
+        color: var(--text);
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+      }
+      input:focus,
+      textarea:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(123, 217, 123, 0.35);
+      }
+      button {
+        margin-top: 10px;
+        padding: 10px 14px;
+        cursor: pointer;
+        border: none;
+        border-radius: 6px;
+        background: var(--accent);
+        color: var(--text);
+        font-weight: 600;
+        transition:
+          background 0.2s,
+          transform 0.1s;
+      }
+      button:hover {
+        background: var(--accent-strong);
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+      .post {
+        border: 1px solid var(--border);
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 6px;
+        background: #f7fff7;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .flex {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .tag {
+        background: var(--accent-soft);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 12px;
+        color: var(--text);
+      }
+      .comment {
+        border-top: 1px solid #e0f1e0;
+        padding: 4px 0;
+        font-size: 14px;
+      }
+      .hidden-note {
+        color: #b15;
+        font-weight: bold;
+      }
+      pre#status {
+        background: #eef9ee;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px;
+        color: var(--text);
+      }
+      /* Toasts */
+      #toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 999;
+      }
+      .toast {
+        min-width: 220px;
+        padding: 10px 12px;
+        border-radius: 6px;
+        color: var(--text);
+        border: 1px solid var(--border);
+        background: var(--card);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+        opacity: 0.98;
+        transition:
+          opacity 0.4s ease,
+          transform 0.4s ease;
+      }
+      .toast-success {
+        border-color: #7bd97b;
+        background: #e9f9e9;
+      }
+      .toast-error {
+        border-color: #e08c8c;
+        background: #ffeaea;
+      }
+      .toast.hide {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="toast-container"></div>
+    <h1>Демо блога</h1>
+    <section>
+      <h2>Авторизация</h2>
+      <div class="flex">
+        <div style="flex: 1; min-width: 260px">
+          <h3>Регистрация</h3>
+          <label>Имя пользователя <input id="reg-username" /></label>
+          <label>Пароль <input id="reg-password" type="password" /></label>
+          <button onclick="register()">Зарегистрироваться</button>
+        </div>
+        <div style="flex: 1; min-width: 260px">
+          <h3>Вход</h3>
+          <label>Имя пользователя <input id="login-username" /></label>
+          <label>Пароль <input id="login-password" type="password" /></label>
+          <button onclick="login()">Войти</button>
+        </div>
+      </div>
+      <p>Токен: <span id="token-label">(не авторизованы)</span></p>
+    </section>
+
+    <section>
+      <h2>Создание / редактирование постов</h2>
+      <label>Заголовок <input id="post-title" /></label>
+      <label>Содержание <textarea id="post-content" rows="4"></textarea></label>
+      <label
+        >Видимость
+        <select id="post-visibility">
+          <option value="public">Публично</option>
+          <option value="followers">Только для подписчиков</option>
+          <option value="request">Скрыто (по запросу)</option>
+        </select>
+      </label>
+      <label
+        >Теги (через запятую)
+        <input id="post-tags" placeholder="новости, технологии"
+      /></label>
+      <button onclick="createPost()">Создать пост</button>
+    </section>
+
+    <section>
+      <h2>Подписки</h2>
+      <label
+        >Имя пользователя для подписки <input id="follow-username"
+      /></label>
+      <button onclick="followUser()">Подписаться</button>
+      <button onclick="loadFollowing()">Мои подписки</button>
+      <ul id="follow-list"></ul>
+    </section>
+
+    <section>
+      <h2>Ленты</h2>
+      <button onclick="loadPublic()">Публичные посты</button>
+      <button onclick="loadFeed()">Моя лента</button>
+      <label>Фильтр по тегу (нужен вход) <input id="tag-filter" /></label>
+      <button onclick="loadByTag()">Фильтровать</button>
+      <div id="posts"></div>
+    </section>
+
+    <section>
+      <h2>Просмотр поста</h2>
+      <label>ID поста <input id="single-id" /></label>
+      <label
+        ><input type="checkbox" id="single-request" /> Добавить флаг запроса
+        (?request=1)</label
+      >
+      <button onclick="loadSingle()">Открыть</button>
+      <div id="single"></div>
+    </section>
+
+    <section>
+      <h2>Статус</h2>
+      <pre id="status"></pre>
+    </section>
+
+    <script>
+      const statusEl = document.getElementById("status");
+      const postsEl = document.getElementById("posts");
+      const tokenLabel = document.getElementById("token-label");
+      const toastBox = document.getElementById("toast-container");
+
+      function showToast(message, type = "info") {
+        if (!toastBox) return;
+        const el = document.createElement("div");
+        el.className = `toast toast-${type}`;
+        el.textContent = message;
+        toastBox.appendChild(el);
+        setTimeout(() => el.classList.add("hide"), 2600);
+        setTimeout(() => el.remove(), 3200);
+      }
+
+      function setStatus(msg) {
+        statusEl.textContent = msg;
+      }
+
+      function getToken() {
+        return localStorage.getItem("token") || "";
+      }
+
+      function setToken(token) {
+        if (token) {
+          localStorage.setItem("token", token);
+          tokenLabel.textContent = token.slice(0, 20) + "...";
+        } else {
+          localStorage.removeItem("token");
+          tokenLabel.textContent = "(не авторизованы)";
+        }
+      }
+
+      setToken(getToken());
+
+      async function api(path, options = {}) {
+        const headers = options.headers || {};
+        if (getToken()) headers["Authorization"] = "Bearer " + getToken();
+        headers["Content-Type"] = "application/json";
+        const res = await fetch(path, { ...options, headers });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || "Ошибка запроса");
+        }
+        return data;
+      }
+
+      async function register() {
+        try {
+          const username = document.getElementById("reg-username").value;
+          const password = document.getElementById("reg-password").value;
+          const res = await api("/api/register", {
+            method: "POST",
+            body: JSON.stringify({ username, password }),
+          });
+          setStatus(res.message || "Регистрация успешна");
+          showToast("Регистрация успешна", "success");
+        } catch (err) {
+          setStatus(err.message);
+          showToast(err.message, "error");
+        }
+      }
+
+      async function login() {
+        try {
+          const username = document.getElementById("login-username").value;
+          const password = document.getElementById("login-password").value;
+          const res = await api("/api/login", {
+            method: "POST",
+            body: JSON.stringify({ username, password }),
+          });
+          setToken(res.token);
+          setStatus("Вход выполнен");
+          showToast("Вход выполнен", "success");
+        } catch (err) {
+          setStatus(err.message);
+          showToast(err.message, "error");
+        }
+      }
+
+      async function createPost() {
+        try {
+          const title = document.getElementById("post-title").value;
+          const content = document.getElementById("post-content").value;
+          const visibility = document.getElementById("post-visibility").value;
+          const tags = document.getElementById("post-tags").value;
+          const res = await api("/api/posts", {
+            method: "POST",
+            body: JSON.stringify({ title, content, visibility, tags }),
+          });
+          setStatus(`Пост создан #${res.id}`);
+          showToast(`Пост создан #${res.id}`, "success");
+          loadFeed();
+        } catch (err) {
+          setStatus(err.message);
+          showToast(err.message, "error");
+        }
+      }
+
+      async function followUser() {
+        try {
+          const username = document.getElementById("follow-username").value;
+          const res = await api("/api/follow", {
+            method: "POST",
+            body: JSON.stringify({ username }),
+          });
+          setStatus(res.message || "Подписка оформлена");
+          loadFollowing();
+        } catch (err) {
+          setStatus(err.message);
+        }
+      }
+
+      async function loadFollowing() {
+        try {
+          const res = await api("/api/following");
+          const list = document.getElementById("follow-list");
+          list.innerHTML = "";
+          res.following.forEach((u) => {
+            const li = document.createElement("li");
+            li.textContent = u;
+            list.appendChild(li);
+          });
+        } catch (err) {
+          setStatus(err.message);
+        }
+      }
+
+      function renderPost(post, container) {
+        const div = document.createElement("div");
+        div.className = "post";
+        const tags = (post.tags || "").split(",").filter(Boolean);
+        div.innerHTML = `
+        <strong>${post.title}</strong>
+        <div class="meta">автор ${post.author || post.username || "неизвестно"} • ${post.visibility} • ${post.created_at}</div>
+        <div>${post.content}</div>
+        <div class="meta">${tags.map((t) => `<span class="tag">${t}</span>`).join(" ")}</div>
+        <div>
+          <button onclick="loadComments(${post.id}, this)">Комментарии</button>
+          <button onclick="showCommentForm(${post.id}, '${post.title.replace(/'/g, "")}')">Добавить комментарий</button>
+        </div>
+        <div id="comments-${post.id}"></div>
+      `;
+        container.appendChild(div);
+      }
+
+      async function loadPublic() {
+        try {
+          const posts = await api("/api/posts/public", {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          });
+          postsEl.innerHTML = "";
+          posts.forEach((p) => renderPost(p, postsEl));
+          setStatus(`Загружено ${posts.length} публичных постов`);
+        } catch (err) {
+          setStatus(err.message);
+        }
+      }
+
+      async function loadFeed() {
+        try {
+          const posts = await api("/api/posts/feed");
+          postsEl.innerHTML = "";
+          posts.forEach((p) => renderPost(p, postsEl));
+          setStatus(`Загружено ${posts.length} постов в ленте`);
+        } catch (err) {
+          setStatus(err.message);
+        }
+      }
+
+      async function loadByTag() {
+        const tag = document.getElementById("tag-filter").value;
+        if (!tag) return setStatus("Введите тег");
+        try {
+          const posts = await api(`/api/posts/tag/${encodeURIComponent(tag)}`);
+          postsEl.innerHTML = "";
+          posts.forEach((p) => renderPost(p, postsEl));
+          setStatus(`Загружено ${posts.length} постов с тегом ${tag}`);
+        } catch (err) {
+          setStatus(err.message);
+        }
+      }
+
+      async function loadSingle() {
+        const id = document.getElementById("single-id").value;
+        const reqFlag = document.getElementById("single-request").checked;
+        if (!id) return setStatus("Введите ID");
+        const url = `/api/posts/${id}${reqFlag ? "?request=1" : ""}`;
+        try {
+          const post = await api(url);
+          const box = document.getElementById("single");
+          box.innerHTML = "";
+          renderPost(post, box);
+          setStatus(`Загружен пост #${id}`);
+        } catch (err) {
+          setStatus(err.message);
+        }
+      }
+
+      async function loadComments(id, btn) {
+        if (btn) btn.disabled = true;
+        try {
+          const comments = await api(`/api/posts/${id}/comments`);
+          const box = document.getElementById(`comments-${id}`);
+          box.innerHTML = comments
+            .map(
+              (c) =>
+                `<div class="comment"><strong>${c.author}:</strong> ${c.content}</div>`
+            )
+            .join("");
+        } catch (err) {
+          setStatus(err.message);
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+
+      function showCommentForm(id, title) {
+        const content = prompt(`Комментарий к "${title}"`);
+        if (!content) return;
+        addComment(id, content);
+      }
+
+      async function addComment(id, content) {
+        try {
+          const res = await api(`/api/posts/${id}/comments`, {
+            method: "POST",
+            body: JSON.stringify({ content }),
+          });
+          setStatus(res.message || "Комментарий добавлен");
+          loadComments(id);
+        } catch (err) {
+          setStatus(err.message);
+        }
+      }
+    </script>
+  </body>
+</html>
