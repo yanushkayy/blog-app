@@ -64,7 +64,7 @@ git init
 git add .
 git commit -m "Blog app"
 git branch -M main
-git remote add origin https://github.com/<your-user>/<repo>.git
+git remote add origin https://github.com/yanushkayy/blog-app.git
 git push -u origin main
 ```
 
